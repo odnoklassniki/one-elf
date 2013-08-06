@@ -40,7 +40,7 @@ public class HotspotFlags {
             f.setAccessible(true);
             return (Unsafe) f.get(null);
         } catch (Exception e) {
-            throw new AssertionError("Unable to get Unsafe", e);
+            throw new AssertionError("Unable to get Unsafe");
         }
     }
 
