@@ -69,9 +69,8 @@ public class PeReader {
     final long imageBase;
     final short subsystem;
     final short dllCharacteristics;
-    final long[] dataDirectories;
+    final PeDirectory[] directories;
     final PeSection[] sections;
-    final PeSymbolTable symtab;
 
     public PeReader(String fileName) throws IOException {
         this(new File(fileName));
@@ -97,8 +96,6 @@ public class PeReader {
         this.machine = buf.getShort(p);
         int numberOfSections = buf.getShort(p + 2) & 0xffff;
         this.timestamp = buf.getInt(p + 4);
-        int symtabOffset = buf.getInt(p + 8);
-        int numberOfSymbols = buf.getInt(p + 12);
         int sizeOfOptionalHeader = buf.getShort(p + 16) & 0xffff;
         this.characteristics = buf.getShort(p + 18);
 
@@ -117,21 +114,21 @@ public class PeReader {
         this.subsystem = buf.getShort(p + 68);
         this.dllCharacteristics = buf.getShort(p + 70);
 
-        this.dataDirectories = readDataDirectories(pe64 ? p + 108 : p + 92);
+        this.directories = readDirectories(pe64 ? p + 108 : p + 92);
         this.sections = readSections(p + sizeOfOptionalHeader, numberOfSections);
-        this.symtab = new PeSymbolTable(this, symtabOffset, numberOfSymbols);
     }
 
-    private long[] readDataDirectories(int offset) {
-        int numberOfRvaAndSizes = buf.getInt(offset);
+    private PeDirectory[] readDirectories(int offset) {
+        PeDirectoryType[] directoryTypes = PeDirectoryType.values();
+        int numberOfRvaAndSizes = Math.min(buf.getInt(offset), directoryTypes.length);
         offset += 4;
 
-        long[] dataDirectories = new long[numberOfRvaAndSizes];
+        PeDirectory[] directories = new PeDirectory[numberOfRvaAndSizes];
         for (int i = 0; i < numberOfRvaAndSizes; i++) {
-            dataDirectories[i] = buf.getLong(offset);
+            directories[i] = directoryTypes[i].instantiate(this, offset);
             offset += 8;
         }
-        return dataDirectories;
+        return directories;
     }
 
     private PeSection[] readSections(int offset, int numberOfSections) {
@@ -152,11 +149,11 @@ public class PeReader {
         }
     }
 
-    public PeSection[] sections() {
-        return sections;
+    public PeDirectory[] directories() {
+        return directories;
     }
 
-    public PeSymbolTable symtab() {
-        return symtab;
+    public PeSection[] sections() {
+        return sections;
     }
 }

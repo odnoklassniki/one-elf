@@ -84,6 +84,6 @@ public class PeSection {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + name() + ')';
+        return name() + '(' + Long.toHexString(virtualAddress()) + ',' + virtualSize() + ')';
     }
 }
