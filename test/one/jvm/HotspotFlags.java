@@ -4,6 +4,7 @@ import one.elf.ElfReader;
 import one.elf.ElfSection;
 import one.elf.ElfSymbol;
 import one.elf.ElfSymbolTable;
+
 import sun.misc.Unsafe;
 
 import java.io.BufferedReader;
@@ -30,6 +31,7 @@ public class HotspotFlags {
         if (!(symtab instanceof ElfSymbolTable)) {
             throw new IOException(".symtab section not found");
         }
+
         this.symtab = (ElfSymbolTable) symtab;
         this.baseAddress = elfReader.elf64() ? jvmAddress : 0;
     }
@@ -61,7 +63,7 @@ public class HotspotFlags {
                     return s;
                 }
             }
-            throw new IOException("libjvm.so is not loaded");
+            throw new IOException("libjvm.so not found");
         } finally {
             reader.close();
         }
@@ -69,43 +71,29 @@ public class HotspotFlags {
 
     public ElfSymbol findSymbol(String name) {
         for (ElfSymbol symbol : symtab) {
-            if (name.equals(symbol.name())
-                    && (symbol.bind() == ElfSymbol.STB_GLOBAL || symbol.bind() == ElfSymbol.STB_LOCAL)
-                    && (symbol.type() == ElfSymbol.STT_OBJECT || symbol.type() == ElfSymbol.STT_FUNC)) {
+            if (name.equals(symbol.name()) && symbol.type() == ElfSymbol.STT_OBJECT) {
                 return symbol;
             }
         }
         throw new NoSuchElementException("Symbol not found: " + name);
     }
 
+    public int getIntFlag(String name) {
+        ElfSymbol symbol = findSymbol(name);
+        return unsafe.getInt(baseAddress + symbol.value());
+    }
+
     public boolean getBooleanFlag(String name) {
         return getIntFlag(name) != 0;
     }
 
-    public int getIntFlag(String name) {
+    public void setIntFlag(String name, int value) {
         ElfSymbol symbol = findSymbol(name);
-        switch ((int) symbol.size()) {
-            case 1: return unsafe.getByte(baseAddress + symbol.value());
-            case 2: return unsafe.getShort(baseAddress + symbol.value());
-            case 4: // fall through
-            case 8: return unsafe.getInt(baseAddress + symbol.value());
-            default: throw new IllegalArgumentException("Illegal symbol size: " + symbol.size());
-        }
+        unsafe.putInt(baseAddress + symbol.value(), value);
     }
 
     public void setBooleanFlag(String name, boolean value) {
         setIntFlag(name, value ? 1 : 0);
-    }
-
-    public void setIntFlag(String name, int value) {
-        ElfSymbol symbol = findSymbol(name);
-        switch ((int) symbol.size()) {
-            case 1: unsafe.putByte(baseAddress + symbol.value(), (byte) value); break;
-            case 2: unsafe.putShort(baseAddress + symbol.value(), (short) value); break;
-            case 4: unsafe.putInt(baseAddress + symbol.value(), value); break;
-            case 8: unsafe.putLong(baseAddress + symbol.value(), value); break;
-            default: throw new IllegalArgumentException("Illegal symbol size: " + symbol.size());
-        }
     }
 
     private static long testHashCode() {
