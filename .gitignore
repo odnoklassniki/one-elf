@@ -6,3 +6,10 @@
 *.jar
 *.war
 *.ear
+
+# Build files
+.gradle/
+gradle/
+build/
+gradlew*
+
