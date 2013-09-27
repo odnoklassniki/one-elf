@@ -9,6 +9,16 @@
 
 apply plugin:'java' // applies the java plugin
 
+sourceSets {
+    main {
+        java {
+            srcDir 'src/'
+        }
+        resources {
+        }
+    }
+}
+
 repositories{
     mavenCentral() // Use 'maven central' for resolving your thirdparty dependencies.
                    // you can declare any maven/ivy/file repository to resolve your thirdparty dependencies
